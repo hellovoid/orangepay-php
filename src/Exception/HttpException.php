@@ -82,7 +82,7 @@ class HttpException extends \Exception
             case 500:
                 return InternalServerException::class;
             default:
-                return HttpException::class;
+                return static::class;
         }
     }
 }
