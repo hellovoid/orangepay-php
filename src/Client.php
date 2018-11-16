@@ -73,7 +73,7 @@ class Client
 
     public function rebill(array $attributes = [])
     {
-        return $this->getAndDecodeData('recurring/charges', $attributes);
+        return $this->postAndDecodeData('recurring/charges', $attributes);
     }
 
     public function refund(array $attributes = [])
