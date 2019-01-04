@@ -2,7 +2,7 @@
 
 namespace Hellovoid\Orangepay\Exception;
 
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\RequestException as BaseRequestException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -11,23 +11,6 @@ class HttpException extends \Exception
     private $errors;
     private $request;
     private $response;
-
-    /**
-     * Wraps an API exception in the appropriate domain exception.
-     *
-     * @param RequestException $e The API exception
-     *
-     * @return HttpException
-     */
-    public static function wrap(RequestException $e)
-    {
-        $response = $e->getResponse();
-
-        $class = self::exceptionClass($response);
-        $message = self::getErrorMessage($response);
-
-        return new $class($message, [], $e->getRequest(), $response, $e);
-    }
 
     public function __construct($message, array $errors, RequestInterface $request, ResponseInterface $response, \Exception $previous)
     {
@@ -38,30 +21,26 @@ class HttpException extends \Exception
         $this->response = $response;
     }
 
-    public function getRequest()
+    /**
+     * Wraps an API exception in the appropriate domain exception.
+     *
+     * @param BaseRequestException $e The API exception
+     *
+     * @return HttpException
+     */
+    public static function wrap(BaseRequestException $e)
     {
-        return $this->request;
-    }
+        $response = $e->getResponse();
 
-    public function getResponse()
-    {
-        return $this->response;
-    }
-
-    public function getStatusCode()
-    {
-        return $this->response->getStatusCode();
-    }
-
-    private static function getErrorMessage(ResponseInterface $response)
-    {
-        $data = $response ? json_decode($response->getBody(), true) : null;
-
-        if (isset($data['message'])) {
-            return $data['message'];
+        if ($response === null) {
+            $class = BaseRequestException::class;
+            $message = $e->getMessage();
+        } else {
+            $class = self::exceptionClass($response);
+            $message = self::getErrorMessage($response);
         }
 
-        return null;
+        return new $class($message, [], $e->getRequest(), $response, $e);
     }
 
     private static function exceptionClass(ResponseInterface $response)
@@ -82,7 +61,33 @@ class HttpException extends \Exception
             case 500:
                 return InternalServerException::class;
             default:
-                return HttpException::class;
+                return static::class;
         }
+    }
+
+    private static function getErrorMessage(ResponseInterface $response)
+    {
+        $data = $response ? json_decode($response->getBody(), true) : null;
+
+        if (isset($data['message'])) {
+            return $data['message'];
+        }
+
+        return null;
+    }
+
+    public function getRequest()
+    {
+        return $this->request;
+    }
+
+    public function getResponse()
+    {
+        return $this->response;
+    }
+
+    public function getStatusCode()
+    {
+        return $this->response->getStatusCode();
     }
 }
